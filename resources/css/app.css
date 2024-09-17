@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@media (max-width: 768px) {
+    .video-container {
+        flex-direction: column !important;
+    }
+
+    .videoBox {
+        width: 100% !important;
+        height: 20vh !important;
+        margin-bottom: 20px;
+    }
+
+    .mainTitle {
+        font-size: 1.5rem !important; /* Tamaño más pequeño para móviles */
+    }
+
+    .subtitle {
+        font-size: 1rem !important; /* Tamaño más pequeño para móviles */
+    }
+
+    .header {
+        padding: 10px 0 !important;
+    }
+
+    .navLink {
+        padding: 10px 0 !important;
+        font-size: 1rem !important;
+    }
+
+    .logo {
+        max-width: 80px !important; /* Reducción del tamaño del logo */
+    }
+
+    /* Estilos adicionales para el menú "hamburger" */
+    .menu-button {
+        display: flex !important;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+    }
+
+    .menu-icon {
+        width: 30px;
+        height: 3px;
+        background-color: #333; /* Color por defecto del ícono */
+        margin: 5px 0;
+        transition: transform 0.3s ease;
+    }
+
+    .menu-icon-open {
+        transform: rotate(45deg); /* Efecto de giro cuando se abre el menú */
+    }
+
+    .nav {
+        display: none; /* Oculto por defecto en pantallas pequeñas */
+    }
+
+    .nav-open {
+        display: flex;
+        flex-direction: column;
+        background-color: #fff;
+        position: absolute;
+        top: 60px;
+        right: 0;
+        width: 100%;
+        z-index: 1000;
+        padding: 20px;
+    }
+}
