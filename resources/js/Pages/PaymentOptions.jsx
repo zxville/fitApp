@@ -2,7 +2,7 @@ import React from 'react';
 
 const PaymentOptions = () => {
     return (
-        <section className="w-full flex flex-col justify-center items-center bg-gray-100 pb-32">
+        <section className="flex flex-col justify-center items-center">
             <h2 className="text-5xl font-extrabold text-gray-900 text-center mb-8">
                 Métodos de Pago Aceptados
             </h2>
@@ -23,14 +23,14 @@ const PaymentOptions = () => {
                 </div>
 
                 {/* PayPal */}
-                <div className="flex flex-col items-center">
+                {/* <div className="flex flex-col items-center">
                     <img 
                         src="https://w7.pngwing.com/pngs/136/293/png-transparent-paypal-logo.png" 
                         alt="PayPal" 
                         className="w-20 h-auto transition-transform duration-300 hover:scale-110"
                     />
                     <span className="mt-4 text-gray-700 text-lg font-medium">PayPal</span>
-                </div>
+                </div> */}
 
                 {/* Mercado Pago */}
                 <div className="flex flex-col items-center">
@@ -43,24 +43,24 @@ const PaymentOptions = () => {
                 </div>
 
                 {/* Pago Fácil */}
-                <div className="flex flex-col items-center">
+                {/* <div className="flex flex-col items-center">
                     <img 
                         src="https://w7.pngwing.com/pngs/878/1000/png-transparent-payment-argentina-western-union-invoice-debit-card-summary-text-service-logo.png" 
                         alt="Pago Fácil" 
                         className="w-20 h-auto transition-transform duration-300 hover:scale-110"
                     />
                     <span className="mt-4 text-gray-700 text-lg font-medium">Pago Fácil</span>
-                </div>
+                </div> */}
 
                 {/* Rapipago */}
-                <div className="flex flex-col items-center">
+                {/* <div className="flex flex-col items-center">
                     <img 
                         src="https://e7.pngegg.com/pngimages/368/581/png-clipart-logo-rapipago-brand-cordoba-logo-s-blue-text.png" 
                         alt="Rapipago" 
                         className="w-20 h-auto transition-transform duration-300 hover:scale-110"
                     />
                     <span className="mt-4 text-gray-700 text-lg font-medium">Rapipago</span>
-                </div>
+                </div> */}
 
                 {/* Transferencia Bancaria */}
                 <div className="flex flex-col items-center">

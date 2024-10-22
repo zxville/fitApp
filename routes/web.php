@@ -4,6 +4,8 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\PlanController;
+use App\Http\Controllers\PaymentController;
 
 // Route::get('/', function () {
 //     return Inertia::render('Welcome', [
@@ -27,5 +29,9 @@ Route::middleware('auth')->group(function () {
 Route::get('/', function () {
     return Inertia::render('Home'); // Renderiza la página Home en React
 })->name('home');
+
+Route::get('/plans', [PlanController::class, 'index']);
+
+Route::post('/create-preference', [PaymentController::class, 'createPreference']);
 
 require __DIR__.'/auth.php';

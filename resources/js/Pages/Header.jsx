@@ -17,14 +17,15 @@ const Header = ({ activeSection, setActiveSection }) => {
     return (
         <>
             <header
-                className="sticky top-0 w-full p-4 shadow-md z-[1000] backdrop-blur-lg transition-colors duration-300 ease-in-out"
+                className="sticky top-0 w-full p-1 shadow-md z-[1000] backdrop-blur-lg transition-colors duration-300 ease-in-out"
                 style={{ background: `linear-gradient(40deg, ${theme.colors.background} 50%, ${theme.colors.secondary} 100%)` }}
             >
                 <div className="flex justify-between items-center max-w-[1200px] mx-auto px-5">
                     {/* Logo */}
                     <div className="flex items-center">
-                        <img src={logo} alt="Logo" className="w-28 h-auto my-1 transition-transform duration-300 ease-in-out hover:scale-110" />
+                        <img src={logo} alt="Logo" className="w-20 h-auto my-1 transition-transform duration-300 ease-in-out hover:scale-110 sm:w-24 md:w-28 xl:h-20" />
                     </div>
+
 
                     {/* Botón de menú para móviles */}
                     <button
@@ -47,17 +48,17 @@ const Header = ({ activeSection, setActiveSection }) => {
 
                     {/* Opciones de navegación para pantallas grandes */}
                     <nav className="hidden lg:flex items-center space-x-8">
-                        {['Entrenamiento', 'Planes', 'Sobre Mi','Adquirir Plan'].map((item, index) => (
+                        {['Entrenamiento', 'Planes', 'Sobre Mi', 'Metodos de Pago'].map((item, index) => (
                             <button
                                 key={index}
                                 onClick={() => handleMenuClick(index)}
-                                className="relative px-4 py-2 text-lg font-semibold text-current transition-all duration-300 ease-in-out group"
-                                style={{ color: theme.colors.primary }}
+                                className="relative px-4 py-2 text-lg font-semibold transition-all duration-300 ease-in-out group"
                             >
-                                {item}
+                                <span className="bg-gradient-to-r from-pink-400 to-pink-500 text-transparent bg-clip-text">
+                                    {item}
+                                </span>
                                 <span
-                                    className={`absolute left-0 bottom-0 w-full h-0.5 bg-current transform transition-transform origin-left duration-300 ease-out hover:text-red-500 ${activeSection === index ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`}
-                                    style={{ backgroundColor: theme.colors.primary }}
+                                    className={`absolute left-0 bottom-0 w-full h-0.5 bg-gradient-to-r from-pink-500 via-pink-500 to-pink-600 transform transition-transform origin-left duration-300 ease-out ${activeSection === index ? 'scale-x-100' : 'scale-x-0'}`}
                                 ></span>
                             </button>
                         ))}
@@ -73,7 +74,7 @@ const Header = ({ activeSection, setActiveSection }) => {
                     backgroundColor: `${theme.colors.background}80`, // Color de fondo con transparencia
                 }}
             >
-                {['Entrenamiento', 'Planes', 'Sobre Mi', 'Adquirir Plan'].map((item, index) => (
+                {['Entrenamiento', 'Planes', 'Sobre Mi', 'Metodos de Pago'].map((item, index) => (
                     <button
                         key={index}
                         onClick={() => handleMenuClick(index)}

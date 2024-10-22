@@ -1,84 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '@/Components/Modal';
-import PaymentOptions from './PaymentOptions';
-
-const plans = [
-    { 
-        id: 1, 
-        title: 'Plan de Entrenamiento', 
-        description: 'Entrenamiento completo para mejorar tu condición física.', 
-        details: 'Este plan incluye rutinas personalizadas, seguimiento semanal, y acceso a nuestra plataforma de entrenamiento virtual para que puedas ejercitarte desde cualquier lugar. Perfecto para quienes desean mejorar su condición física y tener un control detallado de su progreso.', 
-        price: '$30/mes', 
-        image: 'https://eurofitness.com/wp-content/uploads/2023/01/mejores-consejos-aprovechar-maximo-tu-entrenamiento-728.jpeg' 
-    },
-    { 
-        id: 2, 
-        title: 'Plan Nutricional', 
-        description: 'Un plan nutricional ajustado a tus necesidades.', 
-        details: 'Este plan está diseñado por nuestros nutricionistas para adaptarse a tus necesidades específicas. Incluye una evaluación nutricional, plan de comidas, recetas personalizadas y seguimiento semanal.', 
-        price: '$25/mes', 
-        image: 'https://eurofitness.com/wp-content/uploads/2023/01/mejores-consejos-aprovechar-maximo-tu-entrenamiento-728.jpeg' 
-    },
-    { 
-        id: 3, 
-        title: 'Entrenamiento en Casa', 
-        description: 'Entrena desde la comodidad de tu hogar.', 
-        details: 'Accede a una amplia gama de entrenamientos en video, adaptados a tus preferencias y necesidades. Este plan incluye guías de seguimiento y la posibilidad de ajustar el nivel de dificultad según tus progresos.', 
-        price: '$20/mes', 
-        image: 'https://eurofitness.com/wp-content/uploads/2023/01/mejores-consejos-aprovechar-maximo-tu-entrenamiento-728.jpeg' 
-    },
-    { 
-        id: 4, 
-        title: 'Entrenamiento en Gimnasio', 
-        description: 'Rutinas diseñadas para el gimnasio.', 
-        details: 'Si prefieres entrenar en un gimnasio, este plan te ofrece rutinas avanzadas diseñadas específicamente para el uso de equipos de gimnasio. Ideal para quienes buscan maximizar su fuerza y resistencia.', 
-        price: '$35/mes', 
-        image: 'https://eurofitness.com/wp-content/uploads/2023/01/mejores-consejos-aprovechar-maximo-tu-entrenamiento-728.jpeg' 
-    },
-    { 
-        id: 5, 
-        title: 'Nutrición + Entrenamiento', 
-        description: 'El paquete completo para mejorar tu salud y condición física.', 
-        details: 'Este plan combina lo mejor de nuestros planes de nutrición y entrenamiento. Obtendrás acceso a un plan nutricional personalizado y entrenamientos detallados para casa o gimnasio.', 
-        price: '$50/mes', 
-        image: 'https://eurofitness.com/wp-content/uploads/2023/01/mejores-consejos-aprovechar-maximo-tu-entrenamiento-728.jpeg' 
-    }
-];
+import axios from 'axios';
+import { FaTimes } from 'react-icons/fa';
+import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 
 const PlansSection = ({ setIsModalOpen }) => {
+    const [plans, setPlans] = useState([]);
     const [selectedPlan, setSelectedPlan] = useState(null);
     const [isModalOpen, setLocalModalOpen] = useState(false);
-    const [currentStep, setCurrentStep] = useState(1); // Estado para manejar el step actual
-    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(''); // Estado para manejar el método de pago seleccionado
+    const [currentStep, setCurrentStep] = useState(1);
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
+    const [transactionDetails, setTransactionDetails] = useState({
+        operationNumber: '',
+        email: '',
+        receipt: null,
+    });
+
+    useEffect(() => {
+        initMercadoPago('APP_USR-b3e89d13-a151-423a-a099-5fd9587b54d6', { locale: 'es-AR' });
+    }, []);
+
+    useEffect(() => {
+        const fetchPlans = async () => {
+            try {
+                const response = await fetch('plans');
+                const data = await response.json();
+                setPlans(data);
+            } catch (error) {
+                console.error('Error fetching plans:', error);
+            }
+        };
+        fetchPlans();
+    }, []);
 
     const handleMoreInfo = (plan) => {
         setSelectedPlan(plan);
         setLocalModalOpen(true);
-        setIsModalOpen(true);  // Informar al componente Home que el modal está abierto
+        setIsModalOpen(true);
     };
 
     const handleCloseModal = () => {
         setLocalModalOpen(false);
-        setIsModalOpen(false);  // Informar al componente Home que el modal está cerrado
+        setIsModalOpen(false);
         setTimeout(() => {
             setSelectedPlan(null);
-            setCurrentStep(1); // Reiniciar el step al cerrar el modal
-            setSelectedPaymentMethod(''); // Reiniciar el método de pago
+            setCurrentStep(1);
+            setSelectedPaymentMethod('');
+            setTransactionDetails({ operationNumber: '', email: '', receipt: null });
         }, 300);
     };
-
-    // Efecto para manejar el scroll cuando el modal esté abierto.
-    useEffect(() => {
-        if (isModalOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'auto';
-        }
-
-        return () => {
-            document.body.style.overflow = 'auto'; // Restaurar el scroll al desmontar
-        };
-    }, [isModalOpen]);
 
     const handleNextStep = () => {
         setCurrentStep((prevStep) => prevStep + 1);
@@ -88,158 +58,272 @@ const PlansSection = ({ setIsModalOpen }) => {
         setCurrentStep((prevStep) => prevStep - 1);
     };
 
-    const handlePaymentMethodChange = (method) => {
+    const handlePaymentMethodChange = async (method) => {
         setSelectedPaymentMethod(method);
+        if (method === 'Mercado Pago') {
+            try {
+                const response = await axios.post('/create-preference', {
+                    plan_title: selectedPlan.title,
+                    price: selectedPlan.price,
+                });
+                setTransactionDetails((prevDetails) => ({
+                    ...prevDetails,
+                    operationNumber: response.data.preferenceId,
+                }));
+            } catch (error) {
+                console.error('Error creating preference:', error);
+            }
+        }
+    };
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setTransactionDetails((prevDetails) => ({
+            ...prevDetails,
+            [name]: value,
+        }));
+    };
+
+    const handleFileChange = (e) => {
+        setTransactionDetails((prevDetails) => ({
+            ...prevDetails,
+            receipt: e.target.files[0],
+        }));
+    };
+
+    const handleSubmit = () => {
+        // Save the payment details to the database
+        const formData = new FormData();
+        formData.append('plan', selectedPlan.title);
+        formData.append('price', selectedPlan.price);
+        formData.append('paymentMethod', selectedPaymentMethod);
+        formData.append('operationNumber', transactionDetails.operationNumber);
+        formData.append('email', transactionDetails.email);
+        if (transactionDetails.receipt) {
+            formData.append('receipt', transactionDetails.receipt);
+        }
+
+        // Replace with your API endpoint
+        fetch('/save-payment-details', {
+            method: 'POST',
+            body: formData,
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                console.log('Payment details saved:', data);
+                handleCloseModal();
+            })
+            .catch((error) => {
+                console.error('Error saving payment details:', error);
+            });
     };
 
     return (
-        <section className="w-full flex flex-col justify-center items-center bg-gray-100 pb-32">
-            <div className="lg:grid lg:grid-cols-3 gap-8 w-full max-w-6xl mx-auto px-5 overflow-x-auto sm:flex sm:space-x-5">
-                {plans.map(plan => (
-                    <div
-                        key={plan.id}
-                        className="bg-white min-w-[250px] sm:min-w-[300px] rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out overflow-hidden flex flex-col items-center"
-                    >
-                        <img
-                            src={plan.image}
-                            alt={plan.title}
-                            className="w-full h-48 object-cover"
-                        />
-                        <div className="p-6 text-center">
-                            <h3 className="text-xl font-semibold text-gray-800 mb-3">{plan.title}</h3>
-                            <p className="text-gray-600">{plan.description}</p>
-                            <button
-                                className="mt-4 px-4 py-2 bg-pink-500 text-white font-semibold rounded-lg shadow-md hover:bg-pink-600 transition duration-300"
-                                onClick={() => handleMoreInfo(plan)}
+        <section className="from-white to-gray-100 py-16">
+            <div className="max-w-6xl mx-auto sm:px-6 lg:px-8">
+                <h2 className="text-6xl font-extrabold text-center text-pink-600 mb-20 lg:block hidden">Descubre Nuestros Planes Exclusivos</h2>
+                <div className="grid gap-10 lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1">
+                    {plans.length > 0 ? (
+                        plans.map((plan, index) => (
+                            <div
+                                key={index}
+                                className="bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-transform duration-300 ease-in-out overflow-hidden flex flex-col transform hover:scale-105"
                             >
-                                Más Información
-                            </button>
-                        </div>
-                    </div>
-                ))}
+                                <img
+                                    src={plan.image}
+                                    alt={plan.title}
+                                    className="w-full h-48 object-cover rounded-t-3xl lg:block hidden"
+                                />
+                                <div className="p-6 flex flex-col flex-grow">
+                                    <h3 className="text-3xl font-bold text-gray-800 mb-2">{plan.title}</h3>
+                                    <p className="text-2xl text-pink-500 mb-4 text-right">
+                                        ${' '}
+                                        {plan.price.toLocaleString('es-ES', {
+                                            minimumFractionDigits: 2,
+                                        })}
+                                    </p>
+                                    <p
+                                        className="text-lg text-gray-600 mb-6 leading-relaxed"
+                                        style={{
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            display: '-webkit-box',
+                                            WebkitLineClamp: '3',
+                                            WebkitBoxOrient: 'vertical',
+                                        }}
+                                    >
+                                        {plan.description}
+                                    </p>
+                                    <button
+                                        className="mt-auto px-6 py-4 bg-pink-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl hover:bg-pink-700 transition duration-300"
+                                        onClick={() => handleMoreInfo(plan)}
+                                    >
+                                        Más Información
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-center text-gray-600">
+                            No hay planes disponibles en este momento.
+                        </p>
+                    )}
+                </div>
+
             </div>
 
-            {/* Usando el modal con stepper para los detalles del plan */}
+            {/* Modal de detalles */}
             {selectedPlan && (
-                <Modal show={isModalOpen} onClose={handleCloseModal} maxWidth="2xl">
-                    <div className="p-6">
-                        <button
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-                            onClick={handleCloseModal}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-
-                        {/* Stepper */}
-                        <div className="mb-5">
-                            <div className="flex justify-between">
-                                <div className={`flex-1 border-b-2 ${currentStep >= 1 ? 'border-pink-500' : 'border-gray-200'}`}></div>
-                                <div className={`flex-1 border-b-2 ${currentStep >= 2 ? 'border-pink-500' : 'border-gray-200'}`}></div>
-                                <div className={`flex-1 border-b-2 ${currentStep >= 3 ? 'border-pink-500' : 'border-gray-200'}`}></div>
-                            </div>
-                            <div className="flex justify-between mt-2">
-                                <div className="text-sm text-pink-500">Detalles</div>
-                                <div className="text-sm text-pink-500">Datos de Pago</div>
-                                <div className="text-sm text-pink-500">Confirmación</div>
-                            </div>
-                        </div>
-
-                        {/* Paso 1: Detalles del Plan */}
-                        {currentStep === 1 && (
-                            <>
-                                <img
-                                    src={selectedPlan.image}
-                                    alt={selectedPlan.title}
-                                    className="w-full h-64 object-cover rounded-lg mb-4"
-                                />
-                                <h2 className="text-3xl font-bold text-gray-800 mb-4">{selectedPlan.title}</h2>
-                                <p className="text-gray-700 mb-4 text-center">{selectedPlan.details}</p>
-                                <p className="text-lg font-semibold text-pink-500 mb-4">Precio: {selectedPlan.price}</p>
-                                <div className="flex justify-between">
-                                    <button className="px-6 py-2 bg-pink-500 text-white font-semibold rounded-lg hover:bg-pink-600 transition duration-300" onClick={handleNextStep}>
-                                        Siguiente
-                                    </button>
-                                </div>
-                            </>
-                        )}
-
-                        {/* Paso 2: Selección de Método de Pago */}
-                        {currentStep === 2 && (
-                            <>
-                                <h2 className="text-2xl font-bold mb-4 text-gray-800">Selecciona tu método de pago</h2>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <button
-                                        className={`border-2 rounded-lg p-4 transition-all ${selectedPaymentMethod === 'Mercado Pago' ? 'border-pink-500' : 'border-gray-200'}`}
-                                        onClick={() => handlePaymentMethodChange('Mercado Pago')}
-                                    >
-                                        Mercado Pago
-                                    </button>
-                                    <button
-                                        className={`border-2 rounded-lg p-4 transition-all ${selectedPaymentMethod === 'Tarjeta de Crédito' ? 'border-pink-500' : 'border-gray-200'}`}
-                                        onClick={() => handlePaymentMethodChange('Tarjeta de Crédito')}
-                                    >
-                                        Tarjeta de Crédito
-                                    </button>
-                                    <button
-                                        className={`border-2 rounded-lg p-4 transition-all ${selectedPaymentMethod === 'Tarjeta de Débito' ? 'border-pink-500' : 'border-gray-200'}`}
-                                        onClick={() => handlePaymentMethodChange('Tarjeta de Débito')}
-                                    >
-                                        Tarjeta de Débito
-                                    </button>
-                                    <button
-                                        className={`border-2 rounded-lg p-4 transition-all ${selectedPaymentMethod === 'Paypal' ? 'border-pink-500' : 'border-gray-200'}`}
-                                        onClick={() => handlePaymentMethodChange('Paypal')}
-                                    >
-                                        PayPal
-                                    </button>
-                                    <button
-                                        className={`border-2 rounded-lg p-4 transition-all ${selectedPaymentMethod === 'Transferencia Bancaria' ? 'border-pink-500' : 'border-gray-200'}`}
-                                        onClick={() => handlePaymentMethodChange('Transferencia Bancaria')}
-                                    >
-                                        Transferencia Bancaria
-                                    </button>
-                                </div>
-                                <div className="flex justify-between mt-6">
-                                    <button className="px-6 py-2 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400 transition duration-300" onClick={handlePreviousStep}>
-                                        Anterior
-                                    </button>
-                                    <button
-                                        className={`px-6 py-2 bg-pink-500 text-white font-semibold rounded-lg hover:bg-pink-600 transition duration-300 ${!selectedPaymentMethod && 'opacity-50 cursor-not-allowed'}`}
-                                        onClick={handleNextStep}
-                                        disabled={!selectedPaymentMethod}
-                                    >
-                                        Siguiente
-                                    </button>
-                                </div>
-                            </>
-                        )}
-
-                        {/* Paso 3: Confirmación */}
-                        {currentStep === 3 && (
-                            <>
-                                <h2 className="text-2xl font-bold mb-4 text-gray-800">Confirmación</h2>
-                                <p className="mb-2"><strong>Plan:</strong> {selectedPlan.title}</p>
-                                <p className="mb-2"><strong>Método de pago:</strong> {selectedPaymentMethod}</p>
-                                <p className="mb-2"><strong>Precio:</strong> {selectedPlan.price}</p>
-                                <div className="flex justify-between mt-6">
-                                    <button className="px-6 py-2 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400 transition duration-300" onClick={handlePreviousStep}>
-                                        Anterior
-                                    </button>
-                                    <button
-                                        className="px-6 py-2 bg-pink-500 text-white font-semibold rounded-lg hover:bg-pink-600 transition duration-300"
-                                        onClick={() => alert('Compra Confirmada!')}
-                                    >
-                                        Confirmar Compra
-                                    </button>
-                                </div>
-                            </>
-                        )}
-                    </div>
-                </Modal>
+                <PlanModal
+                    plan={selectedPlan}
+                    isOpen={isModalOpen}
+                    onClose={handleCloseModal}
+                    currentStep={currentStep}
+                    onNextStep={handleNextStep}
+                    onPrevStep={handlePreviousStep}
+                    selectedPaymentMethod={selectedPaymentMethod}
+                    onPaymentChange={handlePaymentMethodChange}
+                    transactionDetails={transactionDetails}
+                    onInputChange={handleInputChange}
+                    onFileChange={handleFileChange}
+                    onSubmit={handleSubmit}
+                />
             )}
         </section>
+    );
+};
+
+const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep, selectedPaymentMethod, onPaymentChange, transactionDetails, onInputChange, onFileChange, onSubmit }) => {
+    if (!isOpen || !plan) return null;
+
+    return (
+        <Modal show={isOpen} onClose={onClose}>
+            <div className="p-10 w-full mx-auto overflow-y-auto bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col">
+                <button
+                    className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 focus:outline-none"
+                    onClick={onClose}
+                >
+                    <FaTimes className="h-6 w-6" />
+                </button>
+
+                <div className="text-center mb-8">
+                    <h2 className="text-5xl font-bold text-pink-600 mb-4">{plan.title}</h2>
+                    <p className="text-3xl font-semibold text-gray-800 mb-4">$ {plan.price}</p>
+                </div>
+
+                {/* Contenido de los pasos */}
+                {currentStep === 1 && (
+                    <div className="flex flex-col lg:flex-row gap-8 mb-8">
+                        <img src={plan.image} alt={plan.title} className="w-full lg:w-1/3 h-auto object-cover rounded-lg shadow-lg hidden lg:block" />
+                        <div className="lg:w-2/3">
+                            <p className="text-xl text-gray-700 mb-6 leading-relaxed">{plan.description}</p>
+                        </div>
+                    </div>
+                )}
+                {currentStep === 2 && (
+                    <div className="mb-8">
+                        <h3 className="text-4xl font-semibold text-gray-800 mb-6">Detalle de la Compra</h3>
+                        <div className="bg-gray-100 p-8 rounded-xl shadow-inner">
+                            <p className="text-lg text-gray-700">Estás a punto de adquirir el plan <strong>{plan.title}</strong>.</p>
+                            <p className="text-lg text-gray-700 mt-4">Precio: <strong>{plan.price}</strong></p>
+                        </div>
+                    </div>
+                )}
+                {currentStep === 3 && (
+                    <div className="mb-8">
+                        <h3 className="text-4xl font-semibold text-gray-800 mb-6">Selecciona el Método de Pago</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {['Transferencia', 'Mercado Pago'].map((method) => (
+                                <button
+                                    key={method}
+                                    className={`p-6 border rounded-lg transition-all duration-300 hover:border-pink-500 ${selectedPaymentMethod === method ? 'border-pink-500 shadow-lg' : 'border-gray-300'}`}
+                                    onClick={() => onPaymentChange(method)}
+                                >
+                                    {method}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                {currentStep === 4 && (
+                    <div className="mb-8">
+                        <h3 className="text-4xl font-semibold text-gray-800 mb-6">Información de Pago</h3>
+                        <div className="bg-gray-100 p-8 rounded-xl shadow-inner">
+                            {selectedPaymentMethod === 'Mercado Pago' && transactionDetails.operationNumber && (
+                                <div className="text-center">
+                                    <Wallet initialization={{ preferenceId: transactionDetails.operationNumber }} />
+                                </div>
+                            )}
+                            {selectedPaymentMethod === 'Transferencia' && (
+                                <div className="text-lg text-gray-700">
+                                    <p className="mb-4">Por favor, realiza la transferencia al siguiente CBU:</p>
+                                    <p className="font-semibold mb-4">CBU: 1234567890123456789012</p>
+                                    <div className="mb-4">
+                                        <label className="block text-gray-700 mb-2" htmlFor="operationNumber">Número de Operación</label>
+                                        <input
+                                            type="text"
+                                            id="operationNumber"
+                                            name="operationNumber"
+                                            value={transactionDetails.operationNumber}
+                                            onChange={onInputChange}
+                                            className="w-full p-2 border rounded-lg focus:outline-none focus:border-pink-500"
+                                        />
+                                    </div>
+                                    <div className="mb-4">
+                                        <label className="block text-gray-700 mb-2" htmlFor="email">Correo Electrónico</label>
+                                        <input
+                                            type="email"
+                                            id="email"
+                                            name="email"
+                                            value={transactionDetails.email}
+                                            onChange={onInputChange}
+                                            className="w-full p-2 border rounded-lg focus:outline-none focus:border-pink-500"
+                                        />
+                                    </div>
+                                    <div className="mb-4">
+                                        <label className="block text-gray-700 mb-2" htmlFor="receipt">Comprobante de Transferencia</label>
+                                        <input
+                                            type="file"
+                                            id="receipt"
+                                            name="receipt"
+                                            onChange={onFileChange}
+                                            className="w-full p-2 border rounded-lg focus:outline-none focus:border-pink-500"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Controles del Stepper */}
+                <div className="flex justify-between mt-8">
+                    <button
+                        className={`px-8 py-4 bg-gray-300 text-white text-lg font-semibold rounded-lg shadow-md transition duration-300 focus:outline-none ${currentStep === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-400'}`}
+                        onClick={onPrevStep}
+                        disabled={currentStep === 1}
+                        aria-disabled={currentStep === 1}
+                    >
+                        Anterior
+                    </button>
+                    {currentStep < 4 ? (
+                        <button
+                            className="px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl hover:from-pink-600 hover:to-purple-700 transition duration-300 focus:outline-none"
+                            onClick={onNextStep}
+                        >
+                            {currentStep === 3 ? 'Confirmar Pago' : 'Siguiente'}
+                        </button>
+                    ) : (
+                        <button
+                            className="px-8 py-4 bg-green-500 text-white text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl hover:bg-green-600 transition duration-300 focus:outline-none"
+                            onClick={onSubmit}
+                        >
+                            Finalizar
+                        </button>
+                    )}
+                </div>
+            </div>
+        </Modal>
     );
 };
 

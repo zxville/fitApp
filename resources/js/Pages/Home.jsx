@@ -7,7 +7,6 @@ import SobreMi from './SobreMi';
 
 const Home = () => {
     const [activeSection, setActiveSection] = useState(0); // Controla qué sección está activa
-    const [showScrollIndicator, setShowScrollIndicator] = useState(true); // Controla la visibilidad del indicador
     const [isModalOpen, setIsModalOpen] = useState(false); // Estado para manejar si el modal está abierto
 
     const sections = [
@@ -28,21 +27,6 @@ const Home = () => {
         }
     };
 
-    const handleScrollDown = () => {
-        if (!isModalOpen && activeSection < sections.length - 1) { // Solo permitir el scroll si el modal no está abierto
-            setActiveSection((prev) => prev + 1);
-        }
-    };
-
-    // Actualiza la visibilidad del indicador según la sección activa
-    useEffect(() => {
-        if (activeSection === sections.length - 1) {
-            setShowScrollIndicator(false); // Oculta el indicador en la última sección
-        } else {
-            setShowScrollIndicator(true); // Muestra el indicador en todas las demás secciones
-        }
-    }, [activeSection]);
-
     useEffect(() => {
         window.addEventListener('wheel', handleScroll);
         return () => {
@@ -59,22 +43,22 @@ const Home = () => {
                 style={{ transform: `translateY(-${activeSection * 100}vh)` }}
             >
                 {sections.map((section, index) => (
-                    <div key={index} className="h-screen flex justify-center items-centerbox-border">
+                    <div key={index} className="h-screen flex justify-center items-center box-border max-h-screen">
                         {section.component}
                     </div>
                 ))}
             </div>
 
-            {/* Indicador de scroll */}
-            {showScrollIndicator && (
-                <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex flex-col items-center animate-fadeIn">
-                    <p className="text-lg text-pink-500 mb-3 animate-bounce">Desplázate hacia abajo</p>
+            {/* Indicador de scroll vertical */}
+            <div className="fixed max-h-screentop-1/2 right-4 transform -translate-y-1/2 flex flex-col items-center space-y-4">
+                {sections.map((_, index) => (
                     <div
-                        className="w-6 h-6 border-b-4 border-r-4 border-pink-500 transform rotate-45 cursor-pointer"
-                        onClick={handleScrollDown}
-                    ></div>
-                </div>
-            )}
+                        key={index}
+                        className={`w-3 h-3 rounded-full transition-all duration-300 cursor-pointer ${activeSection === index ? 'bg-pink-500' : 'bg-gray-300'}`}
+                        onClick={() => setActiveSection(index)}
+                    />
+                ))}
+            </div>
 
             {/* Botón flotante de WhatsApp */}
             <a
@@ -88,6 +72,7 @@ const Home = () => {
                     alt="WhatsApp"
                     className="w-8 h-8"
                 />
+                
             </a>
         </div>
     );
