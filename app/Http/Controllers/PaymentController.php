@@ -3,39 +3,75 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use MercadoPago\SDK;
-use MercadoPago\Preference;
-use MercadoPago\Item;
+use MercadoPago\Client\Preference\PreferenceClient;
+use MercadoPago\Exceptions\MPApiException;
+use MercadoPago\MercadoPagoConfig;
 
 class PaymentController extends Controller
 {
+    protected function authenticate()
+    {
+        // Configurar el token de acceso usando el valor del archivo .env
+        $mpAccessToken = env('MERCADO_PAGO_ACCESS_TOKEN');
+        MercadoPagoConfig::setAccessToken($mpAccessToken);
+        // (Opcional) Configurar el entorno a LOCAL si se desea probar en localhost
+        MercadoPagoConfig::setRuntimeEnviroment(MercadoPagoConfig::LOCAL);
+    }
+
     public function createPreference(Request $request)
     {
-        // Configurar el SDK con el access token
-        SDK::setAccessToken(env('MERCADO_PAGO_ACCESS_TOKEN'));
+        // Paso 1: Autenticarse
+        $this->authenticate();
 
-        // Crear un ítem de la preferencia con los detalles recibidos del frontend
-        $item = new Item();
-        $item->title = $request->input('plan_title'); // Título del plan
-        $item->quantity = 1; // Cantidad (siempre será 1 porque es un plan)
-        $item->unit_price = (float) $request->input('price'); // Precio del plan
-
-        // Crear la preferencia
-        $preference = new Preference();
-        $preference->items = [$item];
-
-        // Configurar las URLs de retorno
-        $preference->back_urls = [
-            'success' => url('/payment-success'),
-            'failure' => url('/payment-failure'),
-            'pending' => url('/payment-pending'),
+        // Paso 2: Crear los datos del producto
+        $item = [
+            "id" => "1234567890",
+            "title" => $request->input('plan_title'),
+            "description" => "Pago de suscripción al plan " . $request->input('plan_title'),
+            "currency_id" => "ARS",
+            "quantity" => 1,
+            "unit_price" => (float)$request->input('price'),
         ];
-        $preference->auto_return = 'approved';
 
-        // Guardar la preferencia y obtener el preference ID
-        $preference->save();
+        $items = [$item];
 
-        // Retornar el preference ID al frontend
-        return response()->json(['preferenceId' => $preference->id]);
+        // Paso 3: Crear los datos del pagador
+        $payer = [
+            "email" => $request->input('payer_email'),
+        ];
+
+        // Paso 4: Configurar las URLs de retorno
+        $backUrls = [
+            'success' => url('/'),
+            'failure' => url('/'),
+            'pending' => url('/'),
+        ];
+
+        // Paso 5: Crear la preferencia para Checkout Pro
+        $requestArray = [
+            "items" => $items,
+            "payer" => $payer,
+            "back_urls" => $backUrls,
+            "auto_return" => 'approved',
+        ];
+
+        // Paso 6: Inicializar el cliente de preferencia y crear la preferencia
+        $client = new PreferenceClient();
+
+        try {
+            $preference = $client->create($requestArray);
+            // Retornar el id de la preferencia al frontend
+            return response()->json(['preferenceId' => $preference->id], 200);
+        } catch (MPApiException $e) {
+            // Manejar la excepción de la API
+            return response()->json([
+                'error' => 'Error creando la preferencia',
+                'status_code' => $e->getApiResponse()->getStatusCode(),
+                'content' => $e->getApiResponse()->getContent(),
+            ], 500);
+        } catch (\Exception $e) {
+            // Manejar otras excepciones
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 }

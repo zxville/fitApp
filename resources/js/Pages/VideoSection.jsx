@@ -1,10 +1,10 @@
 import React, { useState, useRef } from 'react';
-import homeVideo from '../../../public/images/video.mp4';
-import gymVideo from '../../../public/images/video-2.mp4';
+import homeVideo from '../../../public/images/video-casa-2.mp4';
+import gymVideo from '../../../public/images/video-gimnasio-1.mp4';
 import Modal from '@/Components/Modal';
 
 // Componente para representar cada video de entrenamiento con un diseño original
-const TrainingVideo = ({ videoSrc, title, description, videoRef }) => (
+const TrainingVideo = ({ videoSrc, title, description, videoRef, onClick }) => (
     <div
         className="relative w-full lg:w-1/2 h-[20vh] md:h-[40vh] lg:h-[60vh] rounded-lg overflow-hidden shadow-2xl group cursor-pointer transition-transform duration-500 ease-out hover:scale-105 hover:shadow-3xl"
         onMouseEnter={() => {
@@ -18,6 +18,7 @@ const TrainingVideo = ({ videoSrc, title, description, videoRef }) => (
                 videoRef.current.currentTime = 0;
             }
         }}
+        onClick={onClick}
     >
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-4 bg-gradient-to-t from-black to-transparent opacity-100 group-hover:opacity-0 transition-opacity duration-700 ease-in-out">
             <h2 className="text-white text-3xl md:text-4xl font-bold tracking-wide mb-4 transition-transform duration-500 group-hover:scale-110 drop-shadow-lg text-center italic underline decoration-pink-500">
@@ -85,6 +86,7 @@ const VideoSection = () => {
                         title="Modalidad Hogar"
                         description="Vas a poder entrenar en casa con una rutina de ejercicios para 4 días a la semana. Incluye videos y descripciones detalladas de cómo realizar cada ejercicio, con o sin elementos."
                         videoRef={homeVideoRef}
+                        onClick={() => handleVideoClick('casa')}
                     />
 
                     {/* Video de entrenamiento en gimnasio */}
@@ -93,6 +95,7 @@ const VideoSection = () => {
                         title="Modalidad Gym"
                         description="Ideal para arrancar tu entrenamiento en el gimnasio. Incluye una rutina para 4 días con videos y descripción de cada ejercicio para maximizar tu rendimiento."
                         videoRef={gymVideoRef}
+                        onClick={() => handleVideoClick('gym')}
                     />
                 </div>
             </div>

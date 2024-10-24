@@ -1,6 +1,6 @@
 import { Dialog, DialogPanel, Transition, TransitionChild } from '@headlessui/react';
 
-export default function Modal({ children, show = false, maxWidth = '3xl', closeable = false, onClose = () => {} }) {
+export default function Modal({ children, show = false, maxWidth = '3xl', closeable = false, onClose = () => { } }) {
     const close = () => {
         if (closeable) {
             onClose();
