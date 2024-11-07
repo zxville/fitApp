@@ -4,12 +4,19 @@ import axios from 'axios';
 import { FaTimes } from 'react-icons/fa';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 
-// Stepper Component
+const Notification = ({ message, type, onClose }) => (
+    <div className={`fixed bottom-4 right-4 p-4 text-white rounded shadow-lg ${type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>
+        <p>{message}</p>
+        <button onClick={onClose} className="mt-2 text-sm underline">Cerrar</button>
+    </div>
+);
+
 const Stepper = ({ currentStep }) => {
     const steps = ["Plan", "Resumen", "Pago", "Confirmación"];
 
     return (
-        <div className="flex justify-between items-center w-full mb-8 px-32">
+        <div className="flex justify-between items-center w-full px-4 md:px-16 lg:px-32"
+        >
             {steps.map((step, index) => (
                 <div key={index} className={`relative flex items-center ${index < steps.length - 1 ? 'w-full' : ''}`}>
                     <div className="flex flex-col items-center">
@@ -25,7 +32,6 @@ const Stepper = ({ currentStep }) => {
                             {step}
                         </p>
                     </div>
-
                     {index < steps.length - 1 && (
                         <div className="flex-grow h-0.5 bg-gray-300 mx-4 transition-all duration-300" style={{
                             backgroundColor: currentStep > index + 1 ? '#22c55e' : '#d1d5db'
@@ -37,23 +43,13 @@ const Stepper = ({ currentStep }) => {
     );
 };
 
-
-const sendPlanEmail = async (email, planTitle) => {
-    try {
-        const response = await axios.post('/send-plan', { email, planTitle });
-        console.log('Plan sent successfully:', response.data);
-    } catch (error) {
-        console.error('Error sending the plan:', error);
-    }
-};
-
-
 const PlansSection = ({ setIsModalOpen }) => {
     const [plans, setPlans] = useState([]);
     const [selectedPlan, setSelectedPlan] = useState(null);
     const [isModalOpen, setLocalModalOpen] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
+    const [notification, setNotification] = useState(null);
     const [transactionDetails, setTransactionDetails] = useState({
         operationNumber: '',
         email: '',
@@ -62,16 +58,17 @@ const PlansSection = ({ setIsModalOpen }) => {
 
     useEffect(() => {
         initMercadoPago('APP_USR-25e32e7d-c0c0-41cd-83f1-822385199575', { locale: 'es-AR' });
+        axios.defaults.headers.common['X-XSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     }, []);
 
     useEffect(() => {
         const fetchPlans = async () => {
             try {
-                const response = await fetch('plans');
-                const data = await response.json();
-                setPlans(data);
+                const response = await axios.get('plans');
+                setPlans(response.data);
             } catch (error) {
                 console.error('Error fetching plans:', error);
+                setNotification({ message: 'Error al cargar planes', type: 'error' });
             }
         };
         fetchPlans();
@@ -107,7 +104,7 @@ const PlansSection = ({ setIsModalOpen }) => {
         if (method === 'Mercado Pago') {
             try {
                 const response = await axios.post('/create-preference', {
-                    plan_title: selectedPlan.title,
+                    plan_id: selectedPlan.id,
                     price: selectedPlan.price,
                 });
                 setTransactionDetails((prevDetails) => ({
@@ -116,6 +113,7 @@ const PlansSection = ({ setIsModalOpen }) => {
                 }));
             } catch (error) {
                 console.error('Error creating preference:', error);
+                setNotification({ message: 'Error al crear preferencia de pago', type: 'error' });
             }
         }
     };
@@ -135,36 +133,52 @@ const PlansSection = ({ setIsModalOpen }) => {
         }));
     };
 
+    // Modifica la función handleSubmit para manejar las notificaciones de éxito y error
     const handleSubmit = async () => {
         const formData = new FormData();
-        formData.append('plan_title', selectedPlan.title);
-        formData.append('price', selectedPlan.price);
-        formData.append('payment_method', selectedPaymentMethod);
-        formData.append('operation_number', transactionDetails.operationNumber);
+        formData.append('plan_id', selectedPlan.id);
         formData.append('email', transactionDetails.email);
+        formData.append('operation_number', transactionDetails.operationNumber);
+        formData.append('payment_method', selectedPaymentMethod);
         if (transactionDetails.receipt) {
             formData.append('receipt', transactionDetails.receipt);
         }
-    
+
         try {
-            const response = await fetch('/save-payment-details', {
-                method: 'POST',
-                body: formData,
+            const response = await axios.post('/save-payment-details', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
             });
-            const data = await response.json();
-            console.log('Payment details saved:', data);
+            setNotification({ message: '¡Pago guardado exitosamente!', type: 'success' });
+            handleCloseModal(); // Cierra el modal al completar la solicitud
         } catch (error) {
+            const errorMessage = error.response?.data?.message || 'Error al guardar el pago.';
+            setNotification({ message: errorMessage, type: 'error' });
             console.error('Error saving payment details:', error);
         }
     };
-    
-    
+
+
+
+
+    const clearNotification = () => setNotification(null);
 
     return (
-        <section className="from-white to-gray-100 py-16">
-            <div className="max-w-6xl mx-auto sm:px-6 lg:px-8">
-                <h2 className="text-6xl font-extrabold text-center text-pink-600 mb-20 lg:block hidden">Descubre Nuestros Planes Exclusivos</h2>
-                <div className="grid gap-10 lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1">
+        <section className="from-white to-gray-100">
+            {notification && (
+                <Notification
+                    message={notification.message}
+                    type={notification.type}
+                    onClose={clearNotification}
+                />
+            )}
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 className="text-4xl sm:text-6xl font-extrabold text-center text-pink-600 mb-10 sm:mb-20 hidden sm:block">
+    Descubre Nuestros Planes Exclusivos
+</h2>
+
+                <div className="grid gap-6 md:gap-10 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                     {plans.length > 0 ? (
                         plans.map((plan, index) => (
                             <div
@@ -176,16 +190,16 @@ const PlansSection = ({ setIsModalOpen }) => {
                                     alt={plan.title}
                                     className="w-full h-48 object-cover rounded-t-3xl lg:block hidden"
                                 />
-                                <div className="p-6 flex flex-col flex-grow">
-                                    <h3 className="text-3xl font-bold text-gray-800 mb-2">{plan.title}</h3>
-                                    <p className="text-2xl text-pink-500 mb-4 text-right">
+                                <div className="p-4 sm:p-6 flex flex-col flex-grow">
+                                    <h3 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-1 sm:mb-2">{plan.title}</h3>
+                                    <p className="text-xl sm:text-2xl text-pink-500 mb-2 sm:mb-4 text-right">
                                         ${' '}
                                         {plan.price.toLocaleString('es-ES', {
                                             minimumFractionDigits: 2,
                                         })}
                                     </p>
                                     <p
-                                        className="text-lg text-gray-600 mb-6 leading-relaxed"
+                                        className="text-sm sm:text-lg text-gray-600 mb-4 sm:mb-6 leading-relaxed"
                                         style={{
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
@@ -197,7 +211,7 @@ const PlansSection = ({ setIsModalOpen }) => {
                                         {plan.description}
                                     </p>
                                     <button
-                                        className="mt-auto px-6 py-4 bg-pink-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl hover:bg-pink-700 transition duration-300"
+                                        className="mt-auto px-4 py-3 sm:px-6 sm:py-4 bg-pink-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl hover:bg-pink-700 transition duration-300"
                                         onClick={() => handleMoreInfo(plan)}
                                     >
                                         Más Información
@@ -211,8 +225,8 @@ const PlansSection = ({ setIsModalOpen }) => {
                         </p>
                     )}
                 </div>
-
             </div>
+
 
             {/* Modal de detalles */}
             {selectedPlan && (
@@ -231,13 +245,22 @@ const PlansSection = ({ setIsModalOpen }) => {
                     onSubmit={handleSubmit}
                 />
             )}
+
+            {notification && (
+                <Notification
+                    message={notification.message}
+                    type={notification.type}
+                    onClose={clearNotification}
+                />
+            )}
+
         </section>
     );
 };
 
 const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep, selectedPaymentMethod, onPaymentChange, transactionDetails, onInputChange, onFileChange, onSubmit }) => {
     const [paymentError, setPaymentError] = useState(false);
-    const [emailError, setEmailError] = useState(false); // Estado para el error de email
+    const [emailError, setEmailError] = useState(false);
 
     if (!isOpen || !plan) return null;
 
@@ -246,11 +269,11 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
             if (!selectedPaymentMethod) {
                 setPaymentError(true);
             } else if (selectedPaymentMethod === 'Mercado Pago' && !transactionDetails.email) {
-                setEmailError(true); // Mostrar error si no se ingresó un correo
+                setEmailError(true);
             } else {
                 setPaymentError(false);
                 setEmailError(false);
-                onNextStep(); // Avanzar al siguiente paso si todo está correcto
+                onNextStep();
             }
         } else {
             onNextStep();
@@ -270,11 +293,9 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
                 <Stepper currentStep={currentStep} />
 
                 <div className="text-center mb-8 flex-grow">
-                    <h2 className="text-5xl font-bold text-pink-600 mb-4">{plan.title}</h2>
-                    <p className="text-3xl font-semibold text-gray-800 mb-4">$ {plan.price}</p>
+                    <h2 className="text-5xl font-bold text-pink-600 mb-4 pt-8">{plan.title}</h2>
                 </div>
 
-                {/* Contenido de los pasos */}
                 {currentStep === 1 && (
                     <div className="flex flex-col lg:flex-row gap-8 mb-8 flex-grow">
                         <img src={plan.image} alt={plan.title} className="w-full lg:w-1/3 h-auto object-cover rounded-lg shadow-lg hidden lg:block" />
@@ -283,24 +304,23 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
                         </div>
                     </div>
                 )}
+
                 {currentStep === 2 && (
                     <div className="mb-8 flex-grow">
-                        <h3 className="text-4xl font-semibold text-gray-800 mb-6">Detalle de la Compra</h3>
+                        <h3 className="text-2xl font-semibold text-gray-800 mb-6">Detalle de la Compra</h3>
                         <div className="bg-gray-100 p-8 rounded-xl shadow-inner">
                             <p className="text-lg text-gray-700">Estás a punto de adquirir el plan <strong>{plan.title}</strong>.</p>
                             <p className="text-lg text-gray-700 mt-4">Precio: <strong>${plan.price}</strong></p>
-                            {/* Nueva leyenda para explicar la entrega del plan */}
                             <p className="text-lg text-gray-700 mt-6">
-                                <strong>Entrega del Plan:</strong> Una vez confirmado el pago, recibirás tu plan de entrenamiento en el correo electrónico proporcionado dentro de las próximas 24 horas. Si seleccionaste <strong>Mercado Pago</strong>, el plan se enviará automáticamente tras la confirmación del pago. Si realizaste una <strong>Transferencia</strong>, por favor asegúrate de cargar el comprobante de pago para validar la transacción.
+                                <strong>Entrega del Plan:</strong> Una vez confirmado el pago, recibirás tu plan en el correo electrónico proporcionado dentro de las próximas 24 horas.
                             </p>
                         </div>
                     </div>
                 )}
 
-                {/* Contenido de los pasos */}
                 {currentStep === 3 && (
                     <div className="mb-8 flex-grow">
-                        <h3 className="text-4xl font-semibold text-gray-800 mb-6">Selecciona el Método de Pago</h3>
+                        <h3 className="text-2xl font-semibold text-gray-800 mb-6">Selecciona el Método de Pago</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {['Transferencia', 'Mercado Pago'].map((method) => (
                                 <button
@@ -312,8 +332,6 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
                                 </button>
                             ))}
                         </div>
-
-                        {/* Mostrar input para correo electrónico si se selecciona Mercado Pago */}
                         {selectedPaymentMethod === 'Mercado Pago' && (
                             <div className="mt-6">
                                 <label className="block text-lg text-gray-700 mb-2" htmlFor="email">
@@ -328,14 +346,11 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
                                     className="w-full p-3 border rounded-lg focus:outline-none focus:border-pink-500"
                                     placeholder="Ingresa tu correo electrónico"
                                 />
-                                {/* Mostrar error si no se ha ingresado el correo electrónico */}
                                 {emailError && (
                                     <p className="text-red-500 mt-2">Por favor ingresa tu correo electrónico para continuar.</p>
                                 )}
                             </div>
                         )}
-
-                        {/* Mostrar mensaje de error si no se selecciona un método de pago */}
                         {paymentError && (
                             <p className="text-red-500 mt-4">Por favor selecciona un método de pago para continuar.</p>
                         )}
@@ -344,7 +359,7 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
 
                 {currentStep === 4 && (
                     <div className="mb-8 flex-grow">
-                        <h3 className="text-4xl font-semibold text-gray-800 mb-6">Confirmación del Pedido</h3>
+                        <h3 className="text-2xl font-semibold text-gray-800 mb-6">Confirmación del Pedido</h3>
                         <div className="bg-gray-100 p-8 rounded-xl shadow-inner mb-8">
                             <p className="text-lg text-gray-700">Plan seleccionado: <strong>{plan.title}</strong></p>
                             <p className="text-lg text-gray-700 mt-4">Precio: <strong>${plan.price}</strong></p>
@@ -391,7 +406,6 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
                     </div>
                 )}
 
-                {/* Controles del Stepper */}
                 <div className="flex justify-between mt-auto">
                     <button
                         className={`px-8 py-4 bg-gray-300 text-white text-lg font-semibold rounded-lg shadow-md transition duration-300 focus:outline-none ${currentStep === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-400'}`}
@@ -404,7 +418,7 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
                         <button
                             className={`px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl hover:from-pink-600 hover:to-purple-700 transition duration-300 focus:outline-none`}
                             onClick={handleNextStep}
-                            disabled={currentStep === 3 && (!selectedPaymentMethod || (selectedPaymentMethod === 'Mercado Pago' && !transactionDetails.email))} // Deshabilitar si no hay método de pago o correo para Mercado Pago
+                            disabled={currentStep === 3 && (!selectedPaymentMethod || (selectedPaymentMethod === 'Mercado Pago' && !transactionDetails.email))}
                         >
                             {currentStep === 3 ? 'Confirmar Pago' : 'Siguiente'}
                         </button>
@@ -427,9 +441,5 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
         </Modal>
     );
 };
-
-
-
-
 
 export default PlansSection;

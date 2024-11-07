@@ -28,15 +28,32 @@ Route::middleware('auth')->group(function () {
 // Ruta para obtener los planes
 Route::get('/plans', [PlanController::class, 'index']);
 
-// Ruta para crear la preferencia de pago en Mercado Pago
 Route::post('/create-preference', [PaymentController::class, 'createPreference']);
 
+// Rutas para las páginas de retorno
+Route::get('/success', function () {
+    return view('payment.success');
+})->name('payment.success');
+
+Route::get('/failure', function () {
+    return view('payment.failure');
+})->name('payment.failure');
+
+
+Route::get('/pending', function () {
+    return view('payment.pending');
+})->name('payment.pending');
+
+
 // Rutas para compras
-Route::post('/save-payment-details', [CompraController::class, 'store']);  // Permitir registrar compras sin autenticación
 Route::get('/compras', [CompraController::class, 'index']); // Para que el administrador vea las compras pendientes
+
 Route::patch('/compras/{id}/status', [CompraController::class, 'updateStatus']); // Para que el administrador cambie el estado de la compra
 
 // Ruta para recibir notificaciones de Mercado Pago
 Route::post('/mercado-pago-webhook', [CompraController::class, 'mercadoPagoWebhook']);
+
+Route::post('/save-payment-details', [CompraController::class, 'savePaymentDetails']);
+
 
 require __DIR__ . '/auth.php';

@@ -10,18 +10,18 @@ class CreateComprasTable extends Migration
     {
         Schema::create('compras', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id');  // ID del usuario que compra
-            $table->string('plan_title');  // Título del plan comprado
+            $table->unsignedBigInteger('plan_id');  // ID del plan comprado
+            $table->string('email');  // Email para enviar el plan
             $table->decimal('price', 8, 2);  // Precio del plan
             $table->string('payment_method');  // 'Mercado Pago' o 'Transferencia'
             $table->string('operation_number')->nullable();  // Número de operación para transferencias o Mercado Pago
-            $table->string('email');  // Email para enviar el plan
             $table->string('receipt')->nullable();  // Comprobante de transferencia
-            $table->enum('status', ['pendiente', 'aprobado', 'rechazado'])->default('pendiente');  // Estado de la compra
+            $table->string('transaction_id')->nullable(); // ID de transacción de MercadoPago
+            $table->enum('status', ['pendiente', 'pagada', 'rechazada'])->default('pendiente');  // Estado de la compra
             $table->timestamps();
 
-            // Relación con la tabla de usuarios
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            // Relación con la tabla de planes
+            $table->foreign('plan_id')->references('id')->on('plans')->onDelete('cascade');
         });
     }
 

@@ -11,26 +11,7 @@ const PaymentOptions = () => {
             </p>
             
             {/* Logos de medios de pago */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-8 justify-center items-center">
-                {/* Tarjeta de Crédito */}
-                <div className="flex flex-col items-center">
-                    <img 
-                        src="https://e7.pngegg.com/pngimages/867/144/png-clipart-credit-card-bank-computer-icons-money-credit-card-angle-text.png" 
-                        alt="Tarjeta de Crédito" 
-                        className="w-20 h-auto transition-transform duration-300 hover:scale-110"
-                    />
-                    <span className="mt-4 text-gray-700 text-lg font-medium">Tarjeta de Crédito</span>
-                </div>
-
-                {/* PayPal */}
-                {/* <div className="flex flex-col items-center">
-                    <img 
-                        src="https://w7.pngwing.com/pngs/136/293/png-transparent-paypal-logo.png" 
-                        alt="PayPal" 
-                        className="w-20 h-auto transition-transform duration-300 hover:scale-110"
-                    />
-                    <span className="mt-4 text-gray-700 text-lg font-medium">PayPal</span>
-                </div> */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-8 justify-center items-center">
 
                 {/* Mercado Pago */}
                 <div className="flex flex-col items-center">
@@ -42,26 +23,6 @@ const PaymentOptions = () => {
                     <span className="mt-4 text-gray-700 text-lg font-medium">Mercado Pago</span>
                 </div>
 
-                {/* Pago Fácil */}
-                {/* <div className="flex flex-col items-center">
-                    <img 
-                        src="https://w7.pngwing.com/pngs/878/1000/png-transparent-payment-argentina-western-union-invoice-debit-card-summary-text-service-logo.png" 
-                        alt="Pago Fácil" 
-                        className="w-20 h-auto transition-transform duration-300 hover:scale-110"
-                    />
-                    <span className="mt-4 text-gray-700 text-lg font-medium">Pago Fácil</span>
-                </div> */}
-
-                {/* Rapipago */}
-                {/* <div className="flex flex-col items-center">
-                    <img 
-                        src="https://e7.pngegg.com/pngimages/368/581/png-clipart-logo-rapipago-brand-cordoba-logo-s-blue-text.png" 
-                        alt="Rapipago" 
-                        className="w-20 h-auto transition-transform duration-300 hover:scale-110"
-                    />
-                    <span className="mt-4 text-gray-700 text-lg font-medium">Rapipago</span>
-                </div> */}
-
                 {/* Transferencia Bancaria */}
                 <div className="flex flex-col items-center">
                     <img 
@@ -72,15 +33,6 @@ const PaymentOptions = () => {
                     <span className="mt-4 text-gray-700 text-lg font-medium">Transferencia Bancaria</span>
                 </div>
 
-                {/* Débito Automático */}
-                <div className="flex flex-col items-center">
-                    <img 
-                        src="https://e7.pngegg.com/pngimages/425/715/png-clipart-credit-card-debit-card-computer-icons-payment-auto-collision-repair-estimating-guide-blue-angle.png" 
-                        alt="Débito Automático" 
-                        className="w-20 h-auto transition-transform duration-300 hover:scale-110"
-                    />
-                    <span className="mt-4 text-gray-700 text-lg font-medium">Débito Automático</span>
-                </div>
             </div>
         </section>
     );

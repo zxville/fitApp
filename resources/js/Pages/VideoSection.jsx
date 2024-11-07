@@ -3,7 +3,6 @@ import homeVideo from '../../../public/images/video-casa-2.mp4';
 import gymVideo from '../../../public/images/video-gimnasio-1.mp4';
 import Modal from '@/Components/Modal';
 
-// Componente para representar cada video de entrenamiento con un diseño original
 const TrainingVideo = ({ videoSrc, title, description, videoRef, onClick }) => (
     <div
         className="relative w-full lg:w-1/2 h-[20vh] md:h-[40vh] lg:h-[60vh] rounded-lg overflow-hidden shadow-2xl group cursor-pointer transition-transform duration-500 ease-out hover:scale-105 hover:shadow-3xl"
@@ -44,13 +43,14 @@ const TrainingVideo = ({ videoSrc, title, description, videoRef, onClick }) => (
     </div>
 );
 
-const VideoSection = () => {
+const VideoSection = ({ setActiveSection }) => { // Recibe setActiveSection como prop
     const [selectedTraining, setSelectedTraining] = useState(null);
     const homeVideoRef = useRef(null);
     const gymVideoRef = useRef(null);
 
     const handleVideoClick = (trainingType) => {
         setSelectedTraining(trainingType);
+        setActiveSection(1); // Cambia a la sección de planes (índice 1)
     };
 
     const closeModal = () => {
@@ -58,7 +58,7 @@ const VideoSection = () => {
     };
 
     return (
-        <section className="w-full flex flex-col justify-center items-center bg-gradient-to-b pb-32">
+        <section className="w-full flex flex-col justify-center items-center bg-gradient-to-b absolute top-0 pt-0">
             {/* Frase motivacional */}
             <div className="mt-10 text-center px-5">
                 <h1 className="text-4xl md:text-5xl font-extrabold uppercase tracking-tight bg-gradient-to-r from-pink-500 via-red-500 to-red-600 text-transparent bg-clip-text animate-fade-in-down">
@@ -74,7 +74,6 @@ const VideoSection = () => {
                 </p>
             </div>
 
-            {/* Bloque unificado para elegir el plan y mostrar los videos */}
             <div className="w-full max-w-6xl mt-5 px-5 animate-fade-in-up flex flex-col items-center space-y-8">
                 <h2 className="text-2xl md:text-3xl font-semibold text-gray-800 text-center transition-transform duration-500 ease-in-out transform">
                     <span className='relative inline-block animate-bounce-once hover:animate-wiggle'>Elegí el plan que mejor se adapte a tu objetivo</span>
@@ -99,33 +98,6 @@ const VideoSection = () => {
                     />
                 </div>
             </div>
-
-            {/* Modal */}
-            {selectedTraining && (
-                <Modal show={!!selectedTraining} onClose={closeModal} maxWidth="md">
-                    <div className="p-8 text-center animate-fade-in-down">
-                        <h2 className="text-3xl font-bold text-gray-800 mb-6">
-                            {selectedTraining === 'casa' ? 'Entrenamiento en Casa' : 'Entrenamiento en Gimnasio'}
-                        </h2>
-                        <p className="text-lg text-gray-700 mb-6">
-                            {selectedTraining === 'casa'
-                                ? 'El entrenamiento en casa está diseñado para maximizar tu rendimiento utilizando el espacio disponible y recursos mínimos. Perfecto para aquellos con un estilo de vida ocupado.'
-                                : 'El entrenamiento en gimnasio está optimizado para aprovechar el equipamiento avanzado. Ideal para aquellos que desean aumentar su fuerza y resistencia.'}
-                        </p>
-                        <p className="text-md text-gray-600 mb-8">
-                            {selectedTraining === 'casa'
-                                ? 'Con planes adaptados a tu nivel de experiencia, el entrenamiento en casa te permitirá mantenerte en forma y saludable desde la comodidad de tu hogar.'
-                                : 'Los entrenamientos en gimnasio están diseñados para llevar tu fuerza y resistencia al siguiente nivel, utilizando técnicas avanzadas con el mejor equipamiento.'}
-                        </p>
-                        <button
-                            onClick={closeModal}
-                            className="px-8 py-3 bg-gradient-to-r from-pink-500 to-red-500 text-white font-semibold rounded-lg shadow-lg hover:shadow-2xl hover:from-pink-600 hover:to-red-600 transition-all duration-300"
-                        >
-                            Cerrar
-                        </button>
-                    </div>
-                </Modal>
-            )}
         </section>
     );
 };

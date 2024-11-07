@@ -10,19 +10,19 @@ class Compra extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
-        'plan_title',
+        'plan_id',
+        'email',
         'price',
         'payment_method',
         'operation_number',
-        'email',
+        'transaction_id',
         'receipt',
-        'status'
+        'status',
     ];
 
-    // Relación con el usuario
-    public function user()
+    // Relación con el plan
+    public function plan()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Plan::class);
     }
 }
