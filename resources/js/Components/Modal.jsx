@@ -20,7 +20,7 @@ export default function Modal({ children, show = false, maxWidth = '3xl', closea
             <Dialog
                 as="div"
                 id="modal"
-                className="fixed inset-0 flex overflow-y-auto lg:px-20 py-6 sm:px-0 items-center z-50 transform transition-all pt-40"
+                className="fixed pt-20 inset-0 flex overflow-y-auto lg:px-20 sm:px-0 items-center z-50 transform transition-all"
                 onClose={close}
             >
                 <TransitionChild

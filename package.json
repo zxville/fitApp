@@ -3,7 +3,8 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "vite build"
+        "build": "vite build",
+        "pepe": "php artisan serve --host=192.168.2.171 --port=8000"
     },
     "devDependencies": {
         "@headlessui/react": "^2.0.0",

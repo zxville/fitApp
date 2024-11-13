@@ -4,19 +4,11 @@ import axios from 'axios';
 import { FaTimes } from 'react-icons/fa';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 
-const Notification = ({ message, type, onClose }) => (
-    <div className={`fixed bottom-4 right-4 p-4 text-white rounded shadow-lg ${type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>
-        <p>{message}</p>
-        <button onClick={onClose} className="mt-2 text-sm underline">Cerrar</button>
-    </div>
-);
-
 const Stepper = ({ currentStep }) => {
     const steps = ["Plan", "Resumen", "Pago", "Confirmación"];
 
     return (
-        <div className="flex justify-between items-center w-full px-4 md:px-16 lg:px-32"
-        >
+        <div className="flex justify-between items-center w-full px-4 md:px-16 lg:px-32">
             {steps.map((step, index) => (
                 <div key={index} className={`relative flex items-center ${index < steps.length - 1 ? 'w-full' : ''}`}>
                     <div className="flex flex-col items-center">
@@ -49,15 +41,15 @@ const PlansSection = ({ setIsModalOpen }) => {
     const [isModalOpen, setLocalModalOpen] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
-    const [notification, setNotification] = useState(null);
     const [transactionDetails, setTransactionDetails] = useState({
         operationNumber: '',
         email: '',
         receipt: null,
     });
+    const [submitError, setSubmitError] = useState(''); // Estado para manejar el error de envío
 
     useEffect(() => {
-        initMercadoPago('APP_USR-25e32e7d-c0c0-41cd-83f1-822385199575', { locale: 'es-AR' });
+        initMercadoPago('APP_USR-3c7ddf95-934c-4a5a-bcc5-f809d958ef38', { locale: 'es-AR' });
         axios.defaults.headers.common['X-XSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     }, []);
 
@@ -68,7 +60,6 @@ const PlansSection = ({ setIsModalOpen }) => {
                 setPlans(response.data);
             } catch (error) {
                 console.error('Error fetching plans:', error);
-                setNotification({ message: 'Error al cargar planes', type: 'error' });
             }
         };
         fetchPlans();
@@ -88,6 +79,7 @@ const PlansSection = ({ setIsModalOpen }) => {
             setCurrentStep(1);
             setSelectedPaymentMethod('');
             setTransactionDetails({ operationNumber: '', email: '', receipt: null });
+            setSubmitError(''); // Restablece el error al cerrar el modal
         }, 300);
     };
 
@@ -104,6 +96,7 @@ const PlansSection = ({ setIsModalOpen }) => {
         if (method === 'Mercado Pago') {
             try {
                 const response = await axios.post('/create-preference', {
+                    plan_title: selectedPlan.title,
                     plan_id: selectedPlan.id,
                     price: selectedPlan.price,
                 });
@@ -113,7 +106,6 @@ const PlansSection = ({ setIsModalOpen }) => {
                 }));
             } catch (error) {
                 console.error('Error creating preference:', error);
-                setNotification({ message: 'Error al crear preferencia de pago', type: 'error' });
             }
         }
     };
@@ -133,7 +125,6 @@ const PlansSection = ({ setIsModalOpen }) => {
         }));
     };
 
-    // Modifica la función handleSubmit para manejar las notificaciones de éxito y error
     const handleSubmit = async () => {
         const formData = new FormData();
         formData.append('plan_id', selectedPlan.id);
@@ -150,33 +141,23 @@ const PlansSection = ({ setIsModalOpen }) => {
                     'Content-Type': 'multipart/form-data',
                 },
             });
-            setNotification({ message: '¡Pago guardado exitosamente!', type: 'success' });
-            handleCloseModal(); // Cierra el modal al completar la solicitud
+
+            handleCloseModal();
         } catch (error) {
-            const errorMessage = error.response?.data?.message || 'Error al guardar el pago.';
-            setNotification({ message: errorMessage, type: 'error' });
-            console.error('Error saving payment details:', error);
+            // Guarda el mensaje de error completo en submitError
+            const errorMessage = error.response?.data?.message || error.message || 'Error desconocido al guardar el pago.';
+            console.error('Error al guardar el pago:', errorMessage); // Log para verificar el error
+            setSubmitError(errorMessage); // Actualiza el estado de submitError
         }
     };
 
 
-
-
-    const clearNotification = () => setNotification(null);
-
     return (
         <section className="from-white to-gray-100">
-            {notification && (
-                <Notification
-                    message={notification.message}
-                    type={notification.type}
-                    onClose={clearNotification}
-                />
-            )}
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-4xl sm:text-6xl font-extrabold text-center text-pink-600 mb-10 sm:mb-20 hidden sm:block">
-    Descubre Nuestros Planes Exclusivos
-</h2>
+                <h2 className="text-4xl sm:text-6xl font-extrabold text-center text-pink-600 mb-10 sm:mb-20 hidden sm:block">
+                    Descubre Nuestros Planes Exclusivos
+                </h2>
 
                 <div className="grid gap-6 md:gap-10 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                     {plans.length > 0 ? (
@@ -227,8 +208,6 @@ const PlansSection = ({ setIsModalOpen }) => {
                 </div>
             </div>
 
-
-            {/* Modal de detalles */}
             {selectedPlan && (
                 <PlanModal
                     plan={selectedPlan}
@@ -243,22 +222,14 @@ const PlansSection = ({ setIsModalOpen }) => {
                     onInputChange={handleInputChange}
                     onFileChange={handleFileChange}
                     onSubmit={handleSubmit}
+                    submitError={submitError} // Pasa el error como prop
                 />
             )}
-
-            {notification && (
-                <Notification
-                    message={notification.message}
-                    type={notification.type}
-                    onClose={clearNotification}
-                />
-            )}
-
         </section>
     );
 };
 
-const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep, selectedPaymentMethod, onPaymentChange, transactionDetails, onInputChange, onFileChange, onSubmit }) => {
+const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep, selectedPaymentMethod, onPaymentChange, transactionDetails, onInputChange, onFileChange, onSubmit, submitError }) => {
     const [paymentError, setPaymentError] = useState(false);
     const [emailError, setEmailError] = useState(false);
 
@@ -268,21 +239,20 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
         if (currentStep === 3) {
             if (!selectedPaymentMethod) {
                 setPaymentError(true);
-            } else if (selectedPaymentMethod === 'Mercado Pago' && !transactionDetails.email) {
-                setEmailError(true);
             } else {
                 setPaymentError(false);
                 setEmailError(false);
-                onNextStep();
+                onNextStep(); // Solo avanza si los requisitos están completos
             }
         } else {
             onNextStep();
         }
     };
 
+
     return (
         <Modal show={isOpen} onClose={onClose}>
-            <div className="p-10 w-full mx-auto overflow-y-auto bg-white rounded-2xl shadow-2xl max-h-[78vh] min-h-[78vh] flex flex-col">
+            <div className="p-10 mx-auto overflow-y-auto bg-white rounded-2xl shadow-2xl max-h-[78vh] min-h-[78vh] flex flex-col">
                 <button
                     className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 focus:outline-none"
                     onClick={onClose}
@@ -292,12 +262,12 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
 
                 <Stepper currentStep={currentStep} />
 
-                <div className="text-center mb-8 flex-grow">
-                    <h2 className="text-5xl font-bold text-pink-600 mb-4 pt-8">{plan.title}</h2>
+                <div className="text-center mb-4 flex-grow">
+                    <h2 className="text-2xl sm:text-5xl font-bold text-pink-600 mb-4 pt-8">{plan.title}</h2>
                 </div>
 
                 {currentStep === 1 && (
-                    <div className="flex flex-col lg:flex-row gap-8 mb-8 flex-grow">
+                    <div className="flex flex-col lg:flex-row gap-8 mb-4 flex-grow">
                         <img src={plan.image} alt={plan.title} className="w-full lg:w-1/3 h-auto object-cover rounded-lg shadow-lg hidden lg:block" />
                         <div className="lg:w-2/3">
                             <p className="text-xl text-gray-700 mb-6 leading-relaxed">{plan.description}</p>
@@ -306,20 +276,20 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
                 )}
 
                 {currentStep === 2 && (
-                    <div className="mb-8 flex-grow">
+                    <div className="mb-4 flex-grow">
                         <h3 className="text-2xl font-semibold text-gray-800 mb-6">Detalle de la Compra</h3>
                         <div className="bg-gray-100 p-8 rounded-xl shadow-inner">
                             <p className="text-lg text-gray-700">Estás a punto de adquirir el plan <strong>{plan.title}</strong>.</p>
                             <p className="text-lg text-gray-700 mt-4">Precio: <strong>${plan.price}</strong></p>
                             <p className="text-lg text-gray-700 mt-6">
-                                <strong>Entrega del Plan:</strong> Una vez confirmado el pago, recibirás tu plan en el correo electrónico proporcionado dentro de las próximas 24 horas.
+                                <strong>Entrega del Plan:</strong> Una vez confirmado el pago, recibirás un correo electrónico proporcionado dentro de las próximas 24 horas.
                             </p>
                         </div>
                     </div>
                 )}
 
                 {currentStep === 3 && (
-                    <div className="mb-8 flex-grow">
+                    <div className="mb-4 flex-grow">
                         <h3 className="text-2xl font-semibold text-gray-800 mb-6">Selecciona el Método de Pago</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {['Transferencia', 'Mercado Pago'].map((method) => (
@@ -332,43 +302,29 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
                                 </button>
                             ))}
                         </div>
-                        {selectedPaymentMethod === 'Mercado Pago' && (
-                            <div className="mt-6">
-                                <label className="block text-lg text-gray-700 mb-2" htmlFor="email">
-                                    Correo Electrónico para recibir el plan
-                                </label>
-                                <input
-                                    type="email"
-                                    id="email"
-                                    name="email"
-                                    value={transactionDetails.email}
-                                    onChange={onInputChange}
-                                    className="w-full p-3 border rounded-lg focus:outline-none focus:border-pink-500"
-                                    placeholder="Ingresa tu correo electrónico"
-                                />
-                                {emailError && (
-                                    <p className="text-red-500 mt-2">Por favor ingresa tu correo electrónico para continuar.</p>
-                                )}
-                            </div>
-                        )}
                         {paymentError && (
-                            <p className="text-red-500 mt-4">Por favor selecciona un método de pago para continuar.</p>
+                            <p className="text-red-500">Por favor selecciona un método de pago para continuar.</p>
                         )}
                     </div>
                 )}
 
                 {currentStep === 4 && (
-                    <div className="mb-8 flex-grow">
-                        <h3 className="text-2xl font-semibold text-gray-800 mb-6">Confirmación del Pedido</h3>
-                        <div className="bg-gray-100 p-8 rounded-xl shadow-inner mb-8">
-                            <p className="text-lg text-gray-700">Plan seleccionado: <strong>{plan.title}</strong></p>
-                            <p className="text-lg text-gray-700 mt-4">Precio: <strong>${plan.price}</strong></p>
-                            <p className="text-lg text-gray-700 mt-4">Método de Pago: <strong>{selectedPaymentMethod}</strong></p>
+                    <div className="flex-grow">
+                        <div className="bg-gray-100 px-8 py-2 rounded-xl shadow-inner mb-2">
+                            {selectedPaymentMethod === 'Mercado Pago' && (
+                                <div className="mb-8">
+                                    <p className="text-lg text-gray-700">Plan seleccionado: <strong>{plan.title}</strong></p>
+                                    <p className="text-lg text-gray-700 mt-4">Precio: <strong>${plan.price}</strong></p>
+                                    <p className="text-lg text-gray-700 mt-4">Método de Pago: <strong>{selectedPaymentMethod}</strong></p>
+                                    <p className="text-lg text-red-500 mt-10">Toda la Información sera enviada al email de la cuenta de mercado pago</p>
+                                </div>
+                            )}
+
                             {selectedPaymentMethod === 'Transferencia' && (
-                                <div className="mt-6">
-                                    <p className="mb-4">Por favor, realiza la transferencia al siguiente CBU:</p>
+                                <div className="mt-2">
+                                    <p className="mb-1">Por favor, realiza la transferencia al siguiente CBU:</p>
                                     <p className="font-semibold mb-4">CBU: 1234567890123456789012</p>
-                                    <div className="mb-4">
+                                    <div className="mb-1">
                                         <label className="block text-gray-700 mb-2" htmlFor="operationNumber">Número de Operación</label>
                                         <input
                                             type="text"
@@ -379,7 +335,7 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
                                             className="w-full p-2 border rounded-lg focus:outline-none focus:border-pink-500"
                                         />
                                     </div>
-                                    <div className="mb-4">
+                                    <div className="mb-1">
                                         <label className="block text-gray-700 mb-2" htmlFor="email">Correo Electrónico</label>
                                         <input
                                             type="email"
@@ -390,7 +346,7 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
                                             className="w-full p-2 border rounded-lg focus:outline-none focus:border-pink-500"
                                         />
                                     </div>
-                                    <div className="mb-4">
+                                    <div className="mb-1">
                                         <label className="block text-gray-700 mb-2" htmlFor="receipt">Comprobante de Transferencia</label>
                                         <input
                                             type="file"
@@ -402,9 +358,14 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
                                     </div>
                                 </div>
                             )}
+
+                            {submitError && selectedPaymentMethod === 'Transferencia' && (
+                                <p className="text-red-500 text-center mt-4">{submitError}</p>
+                            )}
                         </div>
                     </div>
                 )}
+
 
                 <div className="flex justify-between mt-auto">
                     <button
@@ -414,11 +375,11 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
                     >
                         Anterior
                     </button>
+
                     {currentStep < 4 ? (
                         <button
                             className={`px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl hover:from-pink-600 hover:to-purple-700 transition duration-300 focus:outline-none`}
                             onClick={handleNextStep}
-                            disabled={currentStep === 3 && (!selectedPaymentMethod || (selectedPaymentMethod === 'Mercado Pago' && !transactionDetails.email))}
                         >
                             {currentStep === 3 ? 'Confirmar Pago' : 'Siguiente'}
                         </button>

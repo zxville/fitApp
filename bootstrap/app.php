@@ -16,7 +16,12 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        //
+        // Excluir rutas específicas de la protección CSRF
+        $middleware->validateCsrfTokens(except: [
+            'mercado-pago-webhook',
+            'create-preference',
+            'save-payment-details',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

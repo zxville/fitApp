@@ -1,5 +1,5 @@
 import React from 'react';
-
+import imagen from '../../../public/images/entrenamiento-casa-4.jpg'
 const SobreMi = () => {
     return (
         <div className="flex flex-col items-center px-6 md:px-12 lg:px-24">
@@ -7,8 +7,8 @@ const SobreMi = () => {
             <div className="rounded-lg p-8 max-w-full w-full lg:max-w-6xl lg:px-0 px-4 mx-auto sm:flex sm:flex-row sm:items-start sm:space-x-10  bg-white transition-shadow duration-500 mb-10">
                 {/* Sección de encabezado */}
                 <div className="flex flex-col items-center sm:items-start sm:w-1/3">
-                    <img
-                        src="https://via.placeholder.com/150" // Reemplazar con la imagen del perfil
+                <img
+                        src={imagen} // Usar la variable de la imagen importada
                         alt="Perfil"
                         className="rounded-full w-40 h-40 object-cover shadow-lg mb-6 transition-shadow duration-300 transform lg:block hidden"
                     />
