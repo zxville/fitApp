@@ -133,10 +133,11 @@ const PlansSection = ({ setIsModalOpen }) => {
                 <Carousel
                     responsive={responsive}
                     autoPlay
-                    infinite
                     autoPlaySpeed={4000}
+                    pauseOnHover={true}
                     keyBoardControl
-                    centerMode={true}
+                    centerMode={false}
+                    infinite={false}
                 >
                     {plans.map((plan, index) => (
                         <div
