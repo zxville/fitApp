@@ -1,3 +1,5 @@
+// AuthenticatedLayout.jsx
+
 import { useState } from 'react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
@@ -27,8 +29,15 @@ export default function Authenticated({ user, header, children }) {
                             </div>
 
                             <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                <NavLink href={route('home')} active={route().current('home')}>
-                                    Home
+                                <NavLink href={route('compras.index')} active={route().current('compras')}>
+                                    Compras
+                                </NavLink>
+                            </div>
+
+                            {/* Nuevo botón para la gestión de planes */}
+                            <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                                <NavLink href={route('planes.abm')} active={route().current('planes.abm')}>
+                                    Planes
                                 </NavLink>
                             </div>
                         </div>

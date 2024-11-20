@@ -10,10 +10,27 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\PlanPurchased;
 use MercadoPago\MercadoPagoConfig;
-use MercadoPago\Payment;
+use MercadoPago\Preference;
+use MercadoPago\Item;
+use Inertia\Inertia;
 
 class CompraController extends Controller
 {
+
+    // CompraController.php
+
+    public function index()
+    {
+        $compras = Compra::all();
+        return Inertia::render('Compras', [
+            'compras' => $compras,
+            'auth' => [
+                'user' => auth()->user()
+            ]
+        ]);
+    }
+
+
     // Crear preferencia y registrar la compra con Mercado Pago
     public function createPreference(Request $request)
     {
@@ -24,7 +41,7 @@ class CompraController extends Controller
 
         $plan = Plan::findOrFail($request->plan_id);
 
-        // Registrar la compra con estado 'pendiente'
+        // Crear registro de compra en estado "pendiente"
         $compra = Compra::create([
             'plan_id' => $plan->id,
             'email' => $request->email,
@@ -33,17 +50,25 @@ class CompraController extends Controller
             'status' => 'pendiente',
         ]);
 
-        // Configurar y crear preferencia de MercadoPago
+        // Configurar Mercado Pago y crear la preferencia
         MercadoPagoConfig::setAccessToken(env('MERCADO_PAGO_ACCESS_TOKEN'));
 
-        $preference = new \MercadoPago\Preference();
-        $item = new \MercadoPago\Item();
+        $preference = new Preference();
+        $item = new Item();
+        $item->id = $plan->id;
         $item->title = $plan->title;
+        $item->description = $plan->description;
+        $item->category_id = 'services'; // Ajustar la categoría si es diferente
         $item->quantity = 1;
         $item->unit_price = (float) $plan->price;
 
         $preference->items = [$item];
-        $preference->external_reference = $compra->id;
+        $preference->payer = [
+            'email' => $request->email,
+            'first_name' => $request->first_name ?? 'Nombre',
+            'last_name' => $request->last_name ?? 'Apellido'
+        ];
+        $preference->external_reference = (string) $compra->id;
         $preference->notification_url = route('mercadopago.webhook');
         $preference->back_urls = [
             'success' => url('/success'),
@@ -51,6 +76,9 @@ class CompraController extends Controller
             'pending' => url('/pending'),
         ];
         $preference->auto_return = 'approved';
+        $preference->statement_descriptor = "FITAPP";
+        $preference->binary_mode = true; // Aprobación instantánea si se requiere
+        $preference->installments = 1; // Ajusta el número de cuotas
 
         $preference->save();
 
@@ -65,42 +93,38 @@ class CompraController extends Controller
     public function savePaymentDetails(Request $request)
     {
         $request->validate([
-            'plan_id' => 'required|exists:plans,id', // Verifica que 'plan_id' exista en la tabla 'plans'
+            'plan_id' => 'required|exists:plans,id',
             'email' => 'required|email',
             'operation_number' => 'required|string',
-            'receipt' => 'required|file|mimes:jpg,jpeg,png,pdf', // Asegura que sea un archivo válido
+            'receipt' => 'required|file|mimes:jpg,jpeg,png,pdf',
         ]);
 
         $plan = Plan::findOrFail($request->plan_id);
 
-        // Manejar la carga del comprobante y guardar la ruta
+        // Guardar el comprobante de transferencia
         if ($request->hasFile('receipt')) {
             $receiptPath = $request->file('receipt')->store('receipts', 'public');
         }
 
-        // Crear registro de compra con estado 'pendiente'
+        // Crear registro de compra con estado "pendiente"
         $compra = Compra::create([
             'plan_id' => $plan->id,
             'email' => $request->email,
             'price' => $plan->price,
             'payment_method' => 'Transferencia',
             'operation_number' => $request->operation_number,
-            'receipt' => $receiptPath ?? null, // Guarda la ruta del comprobante
+            'receipt' => $receiptPath ?? null,
             'status' => 'pendiente',
         ]);
 
         return response()->json(['message' => 'Detalles de pago guardados', 'compra' => $compra]);
     }
 
-
-
     // Webhook de Mercado Pago para actualizar el estado de la compra
     public function mercadoPagoWebhook(Request $request)
     {
-        // Loguea toda la información recibida por el webhook
         Log::info('Notificación de Mercado Pago recibida:', $request->all());
 
-        // Extraer el ID del pago desde la estructura de la notificación
         $paymentId = $request->input('data.id');
         if (!$paymentId) {
             Log::warning('ID de pago no encontrado en la notificación recibida.');
@@ -109,7 +133,6 @@ class CompraController extends Controller
 
         $accessToken = env('MERCADO_PAGO_ACCESS_TOKEN');
 
-        // Consultar los detalles del pago en Mercado Pago usando el paymentId
         $response = Http::withToken($accessToken)->get("https://api.mercadopago.com/v1/payments/{$paymentId}");
 
         if ($response->successful()) {
@@ -117,30 +140,34 @@ class CompraController extends Controller
             $paymentStatus = $paymentData['status'];
             $externalReference = $paymentData['external_reference'];
 
-            // Buscar la compra en la base de datos usando la referencia externa (ID de la compra)
             $compra = Compra::find($externalReference);
 
             if ($compra) {
-                // Actualizar el estado de la compra basado en el estado del pago
                 $compra->status = $paymentStatus === 'approved' ? 'pagada' : 'rechazada';
-                $compra->transaction_id = $paymentId; // Guardar el ID de la transacción de Mercado Pago
+                $compra->transaction_id = $paymentId;
                 $compra->save();
 
-                // Si el pago fue aprobado, envía el plan por correo electrónico al usuario
                 if ($compra->status === 'pagada') {
                     Mail::to($compra->email)->send(new PlanPurchased($compra));
                 }
             } else {
-                // Registrar un aviso si no se encuentra la compra en la base de datos
                 Log::warning('Compra no encontrada para la referencia:', ['external_reference' => $externalReference]);
             }
         } else {
-            // Loguear el error si la solicitud para obtener detalles del pago falla
             Log::error('Error al consultar el estado del pago en Mercado Pago:', $response->json());
         }
 
         return response()->json(['message' => 'Webhook procesado']);
     }
 
+
+    // CompraController.php
+
+public function confirmPayment(Request $request)
+{
+    $ids = $request->input('ids');
+    Compra::whereIn('id', $ids)->update(['status' => 'pagada']);
+    return response()->json(['message' => 'Pagos confirmados exitosamente']);
 }
 
+}

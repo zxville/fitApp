@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use Illuminate\Foundation\Application;
+use App\Http\Controllers\PlansController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\PlanController;
@@ -54,6 +54,21 @@ Route::patch('/compras/{id}/status', [CompraController::class, 'updateStatus']);
 Route::post('/mercado-pago-webhook', [CompraController::class, 'mercadoPagoWebhook']);
 
 Route::post('/save-payment-details', [CompraController::class, 'savePaymentDetails']);
+
+
+//Opciones de Administrador
+
+Route::get('/compras', [CompraController::class, 'index'])->name('compras.index');
+
+Route::patch('/compras/confirm-payment', [CompraController::class, 'confirmPayment']);
+
+
+Route::get('/plans', [PlanController::class, 'index'])->name('plans.index');
+Route::post('/plans', [PlanController::class, 'store']);
+Route::post('/plans/{id}', [PlanController::class, 'update']);
+Route::delete('/plans/{id}', [PlanController::class, 'destroy']);
+
+Route::get('/planes-abm', [PlanController::class, 'index2'])->name('planes.abm');
 
 
 require __DIR__ . '/auth.php';

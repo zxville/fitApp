@@ -53,7 +53,7 @@ const Home = () => {
         window.addEventListener('wheel', handleScroll);
         window.addEventListener('touchstart', handleTouchStart);
         window.addEventListener('touchend', handleTouchEnd);
-        
+
         return () => {
             window.removeEventListener('wheel', handleScroll);
             window.removeEventListener('touchstart', handleTouchStart);
@@ -79,10 +79,14 @@ const Home = () => {
                 style={{ transform: `translateY(-${activeSection * 100}vh)` }}
             >
                 {sections.map((section, index) => (
-                    <div key={index} className="h-screen flex justify-center items-center box-border max-h-screen">
+                    <div
+                        key={index}
+                        className="flex items-center justify-center h-screen w-full"
+                    >
                         {section.component}
                     </div>
                 ))}
+
             </div>
 
             <div className="fixed top-1/2 right-4 transform -translate-y-1/2 flex flex-col items-center space-y-4">

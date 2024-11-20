@@ -1,8 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Modal from '@/Components/Modal';
 import axios from 'axios';
 import { FaTimes } from 'react-icons/fa';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
+import Carousel from 'react-multi-carousel';
+import 'react-multi-carousel/lib/styles.css';
+const responsive = {
+    superLargeDesktop: {
+        // the naming can be any, depends on you.
+        breakpoint: { max: 4000, min: 3000 },
+        items: 5
+    },
+    desktop: {
+        breakpoint: { max: 3000, min: 1024 },
+        items: 3
+    },
+    tablet: {
+        breakpoint: { max: 1024, min: 464 },
+        items: 2
+    },
+    mobile: {
+        breakpoint: { max: 464, min: 0 },
+        items: 1
+    }
+};
 
 const Stepper = ({ currentStep }) => {
     const steps = ["Plan", "Resumen", "Pago", "Confirmación"];
@@ -46,24 +67,22 @@ const PlansSection = ({ setIsModalOpen }) => {
         email: '',
         receipt: null,
     });
-    const [submitError, setSubmitError] = useState(''); // Estado para manejar el error de envío
+    const [submitError, setSubmitError] = useState('');
+    const [isLoadingPreference, setIsLoadingPreference] = useState(false);
 
-    useEffect(() => {
-        initMercadoPago('APP_USR-3c7ddf95-934c-4a5a-bcc5-f809d958ef38', { locale: 'es-AR' });
-        axios.defaults.headers.common['X-XSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const fetchPlans = useCallback(async () => {
+        try {
+            const response = await axios.get('plans');
+            setPlans(response.data);
+        } catch (error) {
+            console.error('Error fetching plans:', error);
+        }
     }, []);
 
     useEffect(() => {
-        const fetchPlans = async () => {
-            try {
-                const response = await axios.get('plans');
-                setPlans(response.data);
-            } catch (error) {
-                console.error('Error fetching plans:', error);
-            }
-        };
+        initMercadoPago('APP_USR-7d70e5d0-a45e-4abb-8d20-78b802d440b0', { locale: 'es-AR' });
         fetchPlans();
-    }, []);
+    }, [fetchPlans]);
 
     const handleMoreInfo = (plan) => {
         setSelectedPlan(plan);
@@ -74,139 +93,86 @@ const PlansSection = ({ setIsModalOpen }) => {
     const handleCloseModal = () => {
         setLocalModalOpen(false);
         setIsModalOpen(false);
-        setTimeout(() => {
-            setSelectedPlan(null);
-            setCurrentStep(1);
-            setSelectedPaymentMethod('');
-            setTransactionDetails({ operationNumber: '', email: '', receipt: null });
-            setSubmitError(''); // Restablece el error al cerrar el modal
-        }, 300);
+        setSelectedPlan(null);
+        setCurrentStep(1);
+        setSelectedPaymentMethod('');
+        setTransactionDetails({ operationNumber: '', email: '', receipt: null });
+        setSubmitError('');
     };
 
-    const handleNextStep = () => {
-        setCurrentStep((prevStep) => prevStep + 1);
-    };
-
-    const handlePreviousStep = () => {
-        setCurrentStep((prevStep) => prevStep - 1);
-    };
 
     const handlePaymentMethodChange = async (method) => {
         setSelectedPaymentMethod(method);
         if (method === 'Mercado Pago') {
+            setIsLoadingPreference(true);
             try {
                 const response = await axios.post('/create-preference', {
                     plan_title: selectedPlan.title,
                     plan_id: selectedPlan.id,
                     price: selectedPlan.price,
                 });
-                setTransactionDetails((prevDetails) => ({
-                    ...prevDetails,
+                setTransactionDetails((prev) => ({
+                    ...prev,
                     operationNumber: response.data.preferenceId,
                 }));
             } catch (error) {
                 console.error('Error creating preference:', error);
+            } finally {
+                setIsLoadingPreference(false);
             }
         }
     };
 
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setTransactionDetails((prevDetails) => ({
-            ...prevDetails,
-            [name]: value,
-        }));
-    };
-
-    const handleFileChange = (e) => {
-        setTransactionDetails((prevDetails) => ({
-            ...prevDetails,
-            receipt: e.target.files[0],
-        }));
-    };
-
-    const handleSubmit = async () => {
-        const formData = new FormData();
-        formData.append('plan_id', selectedPlan.id);
-        formData.append('email', transactionDetails.email);
-        formData.append('operation_number', transactionDetails.operationNumber);
-        formData.append('payment_method', selectedPaymentMethod);
-        if (transactionDetails.receipt) {
-            formData.append('receipt', transactionDetails.receipt);
-        }
-
-        try {
-            const response = await axios.post('/save-payment-details', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
-
-            handleCloseModal();
-        } catch (error) {
-            // Guarda el mensaje de error completo en submitError
-            const errorMessage = error.response?.data?.message || error.message || 'Error desconocido al guardar el pago.';
-            console.error('Error al guardar el pago:', errorMessage); // Log para verificar el error
-            setSubmitError(errorMessage); // Actualiza el estado de submitError
-        }
-    };
-
-
     return (
-        <section className="from-white to-gray-100">
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h2 className="text-4xl sm:text-6xl font-extrabold text-center text-pink-600 mb-10 sm:mb-20 hidden sm:block">
+        <section className="min-w-full min-h-full">
+            <div>
+                <h2 className="text-4xl mt-10 sm:text-6xl font-extrabold text-center text-pink-600 mb-28 ">
                     Descubre Nuestros Planes Exclusivos
                 </h2>
 
-                <div className="grid gap-6 md:gap-10 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                    {plans.length > 0 ? (
-                        plans.map((plan, index) => (
-                            <div
-                                key={index}
-                                className="bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-transform duration-300 ease-in-out overflow-hidden flex flex-col transform hover:scale-105"
-                            >
+                <Carousel
+                    responsive={responsive}
+                    autoPlay
+                    infinite
+                    autoPlaySpeed={4000}
+                    keyBoardControl
+                    centerMode={true}
+                >
+                    {plans.map((plan, index) => (
+                        <div
+                            key={index}
+                            className="max-h-96 max-w-full min-h-max min-w-52 p-4 shadow-slate-800"
+                        >
+                            <div className="relative">
                                 <img
-                                    src={plan.image}
+                                    src={`/storage/${plan.image}`}
                                     alt={plan.title}
-                                    className="w-full h-48 object-cover rounded-t-3xl lg:block hidden"
+                                    className="w-full h-40 md:h-56 lg:h-64 object-cover rounded-t-xl"
                                 />
-                                <div className="p-4 sm:p-6 flex flex-col flex-grow">
-                                    <h3 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-1 sm:mb-2">{plan.title}</h3>
-                                    <p className="text-xl sm:text-2xl text-pink-500 mb-2 sm:mb-4 text-right">
-                                        ${' '}
-                                        {plan.price.toLocaleString('es-ES', {
-                                            minimumFractionDigits: 2,
-                                        })}
-                                    </p>
-                                    <p
-                                        className="text-sm sm:text-lg text-gray-600 mb-4 sm:mb-6 leading-relaxed"
-                                        style={{
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            display: '-webkit-box',
-                                            WebkitLineClamp: '3',
-                                            WebkitBoxOrient: 'vertical',
-                                        }}
-                                    >
-                                        {plan.description}
-                                    </p>
-                                    <button
-                                        className="mt-auto px-4 py-3 sm:px-6 sm:py-4 bg-pink-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl hover:bg-pink-700 transition duration-300"
-                                        onClick={() => handleMoreInfo(plan)}
-                                    >
-                                        Más Información
-                                    </button>
+                                <div className="absolute top-2 right-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-3 py-1 md:px-4 md:py-2 text-xs md:text-sm rounded-lg shadow-md">
+                                    ${plan.price.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                                 </div>
                             </div>
-                        ))
-                    ) : (
-                        <p className="text-center text-gray-600">
-                            No hay planes disponibles en este momento.
-                        </p>
-                    )}
-                </div>
+                            <div className="p-3 md:p-5 flex flex-col justify-between flex-grow">
+                                <h3 className="text-base md:text-lg font-bold text-gray-800 mb-2">
+                                    {plan.title}
+                                </h3>
+                                <p className="text-gray-600 text-xs h-28 md:text-sm leading-relaxed line-clamp-3 mb-4">
+                                    {plan.description}
+                                </p>
+                                <button
+                                    className="mt-auto bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 md:px-6 md:py-3 rounded-full font-semibold hover:from-pink-600 hover:to-purple-700 transition shadow-md"
+                                    onClick={() => handleMoreInfo(plan)}
+                                >
+                                    Más Información
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </Carousel>
+
             </div>
+
 
             {selectedPlan && (
                 <PlanModal
@@ -214,24 +180,37 @@ const PlansSection = ({ setIsModalOpen }) => {
                     isOpen={isModalOpen}
                     onClose={handleCloseModal}
                     currentStep={currentStep}
-                    onNextStep={handleNextStep}
-                    onPrevStep={handlePreviousStep}
+                    onNextStep={() => setCurrentStep((prev) => prev + 1)}
+                    onPrevStep={() => setCurrentStep((prev) => prev - 1)}
                     selectedPaymentMethod={selectedPaymentMethod}
                     onPaymentChange={handlePaymentMethodChange}
                     transactionDetails={transactionDetails}
-                    onInputChange={handleInputChange}
-                    onFileChange={handleFileChange}
-                    onSubmit={handleSubmit}
-                    submitError={submitError} // Pasa el error como prop
+                    setTransactionDetails={setTransactionDetails}
+                    submitError={submitError}
+                    isLoadingPreference={isLoadingPreference}
                 />
             )}
         </section>
     );
 };
 
-const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep, selectedPaymentMethod, onPaymentChange, transactionDetails, onInputChange, onFileChange, onSubmit, submitError }) => {
+const PlanModal = ({
+    plan,
+    isOpen,
+    onClose,
+    currentStep,
+    onNextStep,
+    onPrevStep,
+    selectedPaymentMethod,
+    onPaymentChange,
+    transactionDetails,
+    onInputChange,
+    onFileChange,
+    onSubmit,
+    submitError,
+    isLoadingPreference
+}) => {
     const [paymentError, setPaymentError] = useState(false);
-    const [emailError, setEmailError] = useState(false);
 
     if (!isOpen || !plan) return null;
 
@@ -241,14 +220,12 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
                 setPaymentError(true);
             } else {
                 setPaymentError(false);
-                setEmailError(false);
-                onNextStep(); // Solo avanza si los requisitos están completos
+                onNextStep();
             }
         } else {
             onNextStep();
         }
     };
-
 
     return (
         <Modal show={isOpen} onClose={onClose}>
@@ -268,7 +245,7 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
 
                 {currentStep === 1 && (
                     <div className="flex flex-col lg:flex-row gap-8 mb-4 flex-grow">
-                        <img src={plan.image} alt={plan.title} className="w-full lg:w-1/3 h-auto object-cover rounded-lg shadow-lg hidden lg:block" />
+                        <img src={`/storage/${plan.image}`} alt={plan.title} className="object-cover h-svh max-h-72 lg:w-1/3 rounded-lg shadow-lg hidden lg:block" />
                         <div className="lg:w-2/3">
                             <p className="text-xl text-gray-700 mb-6 leading-relaxed">{plan.description}</p>
                         </div>
@@ -366,10 +343,9 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
                     </div>
                 )}
 
-
                 <div className="flex justify-between mt-auto">
                     <button
-                        className={`px-8 py-4 bg-gray-300 text-white text-lg font-semibold rounded-lg shadow-md transition duration-300 focus:outline-none ${currentStep === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-400'}`}
+                        className={`px-8 py-4 bg-gray-600 text-white max-h-16 text-lg font-semibold rounded-lg shadow-md transition duration-300 focus:outline-none ${currentStep === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800'}`}
                         onClick={onPrevStep}
                         disabled={currentStep === 1}
                     >
@@ -380,13 +356,27 @@ const PlanModal = ({ plan, isOpen, onClose, currentStep, onNextStep, onPrevStep,
                         <button
                             className={`px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl hover:from-pink-600 hover:to-purple-700 transition duration-300 focus:outline-none`}
                             onClick={handleNextStep}
+                            disabled={isLoadingPreference && currentStep === 3}
                         >
                             {currentStep === 3 ? 'Confirmar Pago' : 'Siguiente'}
                         </button>
                     ) : (
                         <div className="flex justify-end w-full">
                             {selectedPaymentMethod === 'Mercado Pago' ? (
-                                <Wallet initialization={{ preferenceId: transactionDetails.operationNumber }} />
+                                <Wallet
+                                initialization={{ preferenceId: transactionDetails.operationNumber }}
+                                customization={{
+                                  visual: {
+                                    buttonBackground: 'blue', // Fondo del botón, usa "pink" o un color específico
+                                    buttonHeight: '0px', // Altura del botón
+                                    borderRadius: '12px', // Bordes redondeados
+                                    valuePropColor: 'white', // Color del texto
+                                    verticalPadding: '0px', // Relleno vertical
+                                    horizontalPadding: '0px', // Relleno horizontal
+                                  },
+                                }}
+                              />
+                              
                             ) : (
                                 <button
                                     className="px-8 py-4 bg-green-500 text-white text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl hover:bg-green-600 transition duration-300 focus:outline-none"
