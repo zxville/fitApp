@@ -366,7 +366,7 @@ const PlanModal = ({
                                 <Wallet
                                 initialization={{ preferenceId: transactionDetails.operationNumber }}
                                 customization={{
-                                  visual: {
+                                  visual: { 
                                     buttonBackground: 'blue', // Fondo del botón, usa "pink" o un color específico
                                     buttonHeight: '0px', // Altura del botón
                                     borderRadius: '12px', // Bordes redondeados
